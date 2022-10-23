@@ -18,8 +18,8 @@ function Main({accounts, isConnected}) {
   const [swordDisabled, setSwordDisabled] = useState(false);
   const [shieldDisabled, setShieldDisabled] = useState(false);
   const [GOLD_ID, SETGOLD_ID] = useState(0);
-  const [SWORD_ID, SETSWORD_ID] = useState(0);
-  const [SHIELD_ID, SETSHIELD_ID] = useState(0);
+  const [SWORD_ID, SETSWORD_ID] = useState(1);
+  const [SHIELD_ID, SETSHIELD_ID] = useState(2);
   const [sellDisabled, setSellDisabled] = useState(true);
 
   const getContractChar = (signer) => {
@@ -80,7 +80,7 @@ function Main({accounts, isConnected}) {
           }
         };
         getChars();
-        getItems();
+        getItems()
         setSellDisabled(false);
       },
       [isConnected],
