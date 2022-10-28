@@ -3,6 +3,8 @@ import {BigNumber, ethers} from 'ethers';
 import CreateCharacterAbi from './../CreateCharacterAbi.json';
 import BasicGameItemsAbi from './../BasicGameItemsAbi.json';
 import Character from './Character';
+import { TextInput, Button, LoadingOverlay, ActionIcon, Alert } from '@mantine/core';
+import { IconArrowRight,  } from '@tabler/icons';
 
 const contractAddress = '0x12530448f0DDBF78A85Bdfb9387E064Cd90384aA';
 const itemsContractAddress = '0x2C00F2A310ae92C4227a88B3b2AA8113784c0BfC';
@@ -14,13 +16,15 @@ function Main({accounts, isConnected}) {
   const [gold, setGold] = useState(0);
   const [sword, setSword] = useState(0);
   const [shield, setShield] = useState(0);
-  const [goldDisabled, setGoldDisabled] = useState(false);
-  const [swordDisabled, setSwordDisabled] = useState(false);
-  const [shieldDisabled, setShieldDisabled] = useState(false);
+  const [apiDisabled, setApiDisabled] = useState(false);
   const [GOLD_ID, SETGOLD_ID] = useState(0);
   const [SWORD_ID, SETSWORD_ID] = useState(1);
   const [SHIELD_ID, SETSHIELD_ID] = useState(2);
   const [sellDisabled, setSellDisabled] = useState(true);
+  const [loadingCreateChar, setLoadingCreateChar] = useState(false);
+  const [error, setError] = useState(false);
+  const [errorM, setErrorM] = useState('');
+  const [errDetail, setErrDetail] = useState('');
 
   const getContractChar = (signer) => {
     return new ethers.Contract(
@@ -28,14 +32,14 @@ function Main({accounts, isConnected}) {
         CreateCharacterAbi.abi,
         signer,
     );
-  }
+  };
   const getContractItems = (signer) => {
     return new ethers.Contract(
         itemsContractAddress,
         BasicGameItemsAbi.abi,
         signer,
     );
-  }
+  };
 
   useEffect(
       () => {
@@ -56,14 +60,14 @@ function Main({accounts, isConnected}) {
                 window.ethereum);
             const signer = provider.getSigner();
             const contract = getContractItems(signer);
-            const GOLD = await contract.GOLD()
-            SETGOLD_ID(parseInt(GOLD.toString()))
-            const SWORD = await contract.SWORD()
-            SETSWORD_ID(parseInt(SWORD.toString()))
-            const SHIELD = await contract.SHIELD()
-            SETSHIELD_ID(parseInt(SHIELD.toString()))
+            const GOLD = await contract.GOLD();
+            SETGOLD_ID(parseInt(GOLD.toString()));
+            const SWORD = await contract.SWORD();
+            SETSWORD_ID(parseInt(SWORD.toString()));
+            const SHIELD = await contract.SHIELD();
+            SETSHIELD_ID(parseInt(SHIELD.toString()));
           }
-        }
+        };
 
         const getItems = async () => {
           if (window.ethereum && isConnected) {
@@ -73,14 +77,16 @@ function Main({accounts, isConnected}) {
             const contract = getContractItems(signer);
 
             const walletAddress = ethers.utils.getAddress(accounts[0]);
-            const res = await contract.balanceOfBatch([walletAddress,walletAddress,walletAddress], [GOLD_ID,SWORD_ID,SHIELD_ID]);
+            const res = await contract.balanceOfBatch(
+                [walletAddress, walletAddress, walletAddress],
+                [GOLD_ID, SWORD_ID, SHIELD_ID]);
             setGold(parseInt(res[0].toString()));
             setSword(parseInt(res[1].toString()));
             setShield(parseInt(res[2].toString()));
           }
         };
         getChars();
-        getItems()
+        getItems();
         setSellDisabled(false);
       },
       [isConnected],
@@ -104,6 +110,7 @@ function Main({accounts, isConnected}) {
 
   async function handleCreateCharacter() {
     if (window.ethereum) {
+      setLoadingCreateChar(true);
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(
@@ -113,12 +120,25 @@ function Main({accounts, isConnected}) {
       );
 
       try {
-        await contract.createCharacter(
+        const response = await contract.createCharacter(
             BigNumber.from(characterId),
             characterName,
         );
+
+        let txResult;
+        while (typeof txResult == 'undefined') {
+          txResult = await getTxReceipt(response.hash);
+        }
+
+        if (txResult.status === 1) {
+          chars.push(characterName);
+          setLoadingCreateChar(false);
+        }
       } catch (err) {
         console.log(err);
+        setError(true);
+        setErrorM('character creation')
+        setLoadingCreateChar(false);
       }
     }
   }
@@ -135,105 +155,101 @@ function Main({accounts, isConnected}) {
     }
   };
 
-  const getGold = async () => {
-    setGoldDisabled(true);
-    const response = await fetch('http://localhost:4000/aquireGold',
-        {
-          method: 'POST',
-          body: JSON.stringify({'address': accounts[0]}),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-    const json = await response.json();
+  const getItem = async (itemId) => {
+    let url;
+    setApiDisabled(true);
+    setError(false);
+    if (itemId === GOLD_ID) {
+      url = 'http://localhost:4000/aquireGold'
+    }
+    if (itemId === SWORD_ID) {
+      url = 'http://localhost:4000/aquireSword'
+    }
+    if (itemId === SHIELD_ID) {
+      url = 'http://localhost:4000/aquireShield'
+    }
+    try {
 
-    let txResult;
-    while (typeof txResult == "undefined") {
-      txResult = await getTxReceipt(json.tx);
-    }
-    if (txResult.status === 1) {
-      setGold(gold+1);
-      setGoldDisabled(false);
-    }
-  };
+      const response = await fetch(url,
+          {
+            method: 'POST',
+            body: JSON.stringify({'address': accounts[0]}),
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+      const json = await response.json();
 
-  const getSword = async () => {
-    setSwordDisabled(true);
-    const response = await fetch('http://localhost:4000/aquireSword',
-        {
-          method: 'POST',
-          body: JSON.stringify({'address': accounts[0]}),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-    const json = await response.json();
+      let txResult;
+      while (typeof txResult == "undefined") {
+        txResult = await getTxReceipt(json.tx);
+      }
 
-    let txResult;
-    while (typeof txResult == "undefined") {
-      txResult = await getTxReceipt(json.tx);
+      if (txResult.status === 1) {
+        if (itemId === GOLD_ID) {
+          setGold(gold + 1);
+        }
+        if (itemId === SWORD_ID) {
+          setSword(sword + 1);
+        }
+        if (itemId === SHIELD_ID) {
+          setShield(shield + 1);
+        }
+        setApiDisabled(false);
+      }
+    } catch (err) {
+      if (itemId === GOLD_ID) {
+        setErrorM('getting gold');
+        setError(true);
+      }
+      if (itemId === SWORD_ID) {
+        setErrorM('getting sword');
+        setError(true);
+      }
+      if (itemId === SHIELD_ID) {
+        setErrorM('getting shield');
+        setError(true);
+      }
+      setErrDetail(err)
+      setApiDisabled(false);
     }
-    if (txResult.status === 1) {
-      setSword(sword+1);
-      setSwordDisabled(false);
-    }
-  };
-
-  const getShield = async () => {
-    setShieldDisabled(true);
-    const response = await fetch('http://localhost:4000/aquireShield',
-        {
-          method: 'POST',
-          body: JSON.stringify({'address': accounts[0]}),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-    const json = await response.json();
-
-    let txResult;
-    while (typeof txResult == "undefined") {
-      txResult = await getTxReceipt(json.tx);
-    }
-    if (txResult.status === 1) {
-      setShield(shield+1);
-      setShieldDisabled(false);
-    }
-  };
+  }
 
   const sellItem = async (itemId) => {
     setSellDisabled(true);
+    setError(false);
     if (window.ethereum && isConnected) {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = getContractItems(signer);
 
-      const res = await contract.tradeObjectForGold(BigNumber.from(itemId),
-          BigNumber.from(1));
+      try {
+        const res = await contract.tradeObjectForGold(BigNumber.from(itemId),
+            BigNumber.from(1));
 
-      let txResult;
-      while (typeof txResult == "undefined") {
-        txResult = await getTxReceipt(res.hash);
-      }
+        let txResult;
+        while (typeof txResult == "undefined") {
+          txResult = await getTxReceipt(res.hash);
+        }
 
-      if (txResult.status === 1) {
-        const walletAddress = ethers.utils.getAddress(accounts[0]);
-        const res = await contract.balanceOf(walletAddress, GOLD_ID);
-        if(itemId === SWORD_ID) setSword(sword - 1);
-        if(itemId === SHIELD_ID) setShield(shield - 1);
-        setGold(parseInt(res.toString()))
+        if (txResult.status === 1) {
+          const walletAddress = ethers.utils.getAddress(accounts[0]);
+          const res = await contract.balanceOf(walletAddress, GOLD_ID);
+          if (itemId === SWORD_ID) setSword(sword - 1);
+          if (itemId === SHIELD_ID) setShield(shield - 1);
+          setGold(parseInt(res.toString()));
+          setSellDisabled(false);
+        }
+      } catch (err) {
+        console.log(err)
+        if (itemId === SWORD_ID) setErrorM('selling sword');
+        if (itemId === SHIELD_ID) setErrorM('selling shield');
+        setError(true);
         setSellDisabled(false);
+        setErrDetail(err)
       }
     }
   };
-
-  const sellSword = () => {
-    sellItem(SWORD_ID);
-  }
-
-  const sellShield = () => {
-    sellItem(SHIELD_ID);
-  }
 
   const handleChangeCharacterName = (event) => {
     setCharacterName(event.target.value);
@@ -242,23 +258,53 @@ function Main({accounts, isConnected}) {
   const renderButtonsForContractInteraction = () => {
     if (chars.length === 0) return <></>;
     return (
-        <div>
-          <button onClick={getGold} disabled={goldDisabled || sellDisabled}>Get Gold ({gold})</button>
-          <button onClick={getSword} disabled={swordDisabled || sellDisabled}>Get Sword ({sword})</button>
-          <button onClick={getShield} disabled={shieldDisabled || sellDisabled}>Get Shield ({shield})</button>
-          <button onClick={sellSword} disabled={sellDisabled}>Sell Sword ({sword}) for golds</button>
-          <button onClick={sellShield} disabled={sellDisabled}>Sell Shield ({shield}) for golds</button>
-        </div>
+        <Button.Group>
+          <Button onClick={() => {getItem(GOLD_ID)}} loading={apiDisabled}>Get
+            Gold ({gold})
+          </Button>
+          <Button onClick={() => {getItem(SWORD_ID)}}
+                  loading={apiDisabled}>Get Sword ({sword})
+          </Button>
+          <Button onClick={() => {getItem(SHIELD_ID)}}
+                  loading={apiDisabled}>Get Shield ({shield})
+          </Button>
+          <Button onClick={() => {sellItem(SWORD_ID)}}>Sell Sword
+            ({sword}) for golds
+          </Button>
+          <Button onClick={() => {sellItem(SHIELD_ID)}}>Sell Shield
+            ({shield}) for golds
+          </Button>
+        </Button.Group>
     );
   };
 
   return (
       <div>
+        <LoadingOverlay visible={loadingCreateChar || sellDisabled} overlayBlur={2} />
         {isConnected ? (
                 <div>
-                  <input type={'text'} onChange={handleChangeCharacterName}
-                         maxLength={50}/>
-                  <button onClick={handleCreateCharacter}>Create character</button>
+                  {error ? (
+                      <Alert
+                          withCloseButton
+                          closeButtonLabel="Close alert"
+                          color="red"
+                          title={`Something went wrong with ${errorM}!`}
+                          onClose={() => {setError(false)}}
+                      >
+                        {errDetail}
+                  </Alert>
+                  ) : <></>}
+
+                  <TextInput
+                      size="md"
+                      onChange={handleChangeCharacterName}
+                      rightSection={
+                        <ActionIcon size={32} onClick={handleCreateCharacter}>
+                          <IconArrowRight size={18} stroke={1.5} />
+                        </ActionIcon>
+                      }
+                      placeholder="Character name"
+                  />
                   <Character chars={chars}/>
                   {renderButtonsForContractInteraction()}
                 </div>
