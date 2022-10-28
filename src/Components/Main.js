@@ -6,8 +6,8 @@ import Character from './Character';
 import { TextInput, Button, LoadingOverlay, ActionIcon, Alert } from '@mantine/core';
 import { IconArrowRight,  } from '@tabler/icons';
 
-const contractAddress = '0x12530448f0DDBF78A85Bdfb9387E064Cd90384aA';
-const itemsContractAddress = '0x2C00F2A310ae92C4227a88B3b2AA8113784c0BfC';
+const contractAddress = '0x3eEec5Dcc66a2D071BCefA7723A76c993302523e';
+const itemsContractAddress = '0x6791C46964D64f31b4bB42ffcF0785ff45E0cf68';
 
 function Main({accounts, isConnected}) {
   const [characterName, setCharacterName] = useState('');
@@ -16,10 +16,12 @@ function Main({accounts, isConnected}) {
   const [gold, setGold] = useState(0);
   const [sword, setSword] = useState(0);
   const [shield, setShield] = useState(0);
+  const [legendaryArmor, setLegendaryArmor] = useState(0);
   const [apiDisabled, setApiDisabled] = useState(false);
   const [GOLD_ID, SETGOLD_ID] = useState(0);
   const [SWORD_ID, SETSWORD_ID] = useState(1);
   const [SHIELD_ID, SETSHIELD_ID] = useState(2);
+  const [LEGENDARY_ID, SETLEGENDARY_ID] = useState(999);
   const [sellDisabled, setSellDisabled] = useState(true);
   const [loadingCreateChar, setLoadingCreateChar] = useState(false);
   const [error, setError] = useState(false);
@@ -66,6 +68,8 @@ function Main({accounts, isConnected}) {
             SETSWORD_ID(parseInt(SWORD.toString()));
             const SHIELD = await contract.SHIELD();
             SETSHIELD_ID(parseInt(SHIELD.toString()));
+            const LEGENDARY_ARMOR = await contract.LEGENDARY_ARMOR();
+            SETLEGENDARY_ID(parseInt(LEGENDARY_ARMOR.toString()));
           }
         };
 
@@ -78,11 +82,12 @@ function Main({accounts, isConnected}) {
 
             const walletAddress = ethers.utils.getAddress(accounts[0]);
             const res = await contract.balanceOfBatch(
-                [walletAddress, walletAddress, walletAddress],
-                [GOLD_ID, SWORD_ID, SHIELD_ID]);
+                [walletAddress, walletAddress, walletAddress, walletAddress],
+                [GOLD_ID, SWORD_ID, SHIELD_ID, LEGENDARY_ID]);
             setGold(parseInt(res[0].toString()));
             setSword(parseInt(res[1].toString()));
             setShield(parseInt(res[2].toString()));
+            setLegendaryArmor(parseInt(res[3].toString()));
           }
         };
         getChars();
@@ -138,6 +143,7 @@ function Main({accounts, isConnected}) {
         console.log(err);
         setError(true);
         setErrorM('character creation')
+        setErrDetail(err.message)
         setLoadingCreateChar(false);
       }
     }
@@ -168,6 +174,9 @@ function Main({accounts, isConnected}) {
     if (itemId === SHIELD_ID) {
       url = 'http://localhost:4000/aquireShield'
     }
+    if (itemId === LEGENDARY_ID) {
+      url = 'http://localhost:4000/aquireLegendaryArmor'
+    }
     try {
 
       const response = await fetch(url,
@@ -179,6 +188,12 @@ function Main({accounts, isConnected}) {
             },
           });
       const json = await response.json();
+      if (json.err) {
+        setError(true);
+        setErrDetail(json.err);
+        setApiDisabled(false);
+        return;
+      }
 
       let txResult;
       while (typeof txResult == "undefined") {
@@ -195,6 +210,9 @@ function Main({accounts, isConnected}) {
         if (itemId === SHIELD_ID) {
           setShield(shield + 1);
         }
+        if (itemId === LEGENDARY_ID) {
+          setLegendaryArmor(1);
+        }
         setApiDisabled(false);
       }
     } catch (err) {
@@ -210,7 +228,11 @@ function Main({accounts, isConnected}) {
         setErrorM('getting shield');
         setError(true);
       }
-      setErrDetail(err)
+      if (itemId === LEGENDARY_ID) {
+        setErrorM('getting legendary armor');
+        setError(true);
+      }
+      setErrDetail(err.message)
       setApiDisabled(false);
     }
   }
@@ -241,12 +263,11 @@ function Main({accounts, isConnected}) {
           setSellDisabled(false);
         }
       } catch (err) {
-        console.log(err)
         if (itemId === SWORD_ID) setErrorM('selling sword');
         if (itemId === SHIELD_ID) setErrorM('selling shield');
         setError(true);
         setSellDisabled(false);
-        setErrDetail(err)
+        setErrDetail(err.message)
       }
     }
   };
@@ -268,10 +289,13 @@ function Main({accounts, isConnected}) {
           <Button onClick={() => {getItem(SHIELD_ID)}}
                   loading={apiDisabled}>Get Shield ({shield})
           </Button>
-          <Button onClick={() => {sellItem(SWORD_ID)}}>Sell Sword
+          <Button onClick={() => {getItem(LEGENDARY_ID)}}
+                  loading={apiDisabled}>Get Legendary armor ({legendaryArmor})
+          </Button>
+          <Button onClick={() => {sellItem(SWORD_ID)}} disabled={sword === 0}>Sell Sword
             ({sword}) for golds
           </Button>
-          <Button onClick={() => {sellItem(SHIELD_ID)}}>Sell Shield
+          <Button onClick={() => {sellItem(SHIELD_ID)}} disabled={shield === 0}>Sell Shield
             ({shield}) for golds
           </Button>
         </Button.Group>

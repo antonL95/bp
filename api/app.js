@@ -26,9 +26,13 @@ app.post('/aquireGold', async (req, res) => {
 
   const walletAddress = ethers.utils.getAddress(address);
 
-  const response = await contract.sendGold(BigNumber.from(1), walletAddress)
+  try {
+    const response = await contract.sendGold(BigNumber.from(1), walletAddress)
 
-  res.send({"tx": response.hash})
+    res.send({"tx": response.hash})
+  } catch (err) {
+    res.send({"err": err.message})
+  }
 })
 
 app.post('/aquireSword', async (req, res) => {
@@ -43,9 +47,13 @@ app.post('/aquireSword', async (req, res) => {
 
   const walletAddress = ethers.utils.getAddress(address);
 
-  const response = await contract.sendSword(BigNumber.from(1), walletAddress)
+  try {
+    const response = await contract.mintSword(walletAddress)
 
-  res.send({"tx": response.hash})
+    res.send({"tx": response.hash})
+  } catch (err) {
+    res.send({"err": err.message})
+  }
 })
 
 app.post('/aquireShield', async (req, res) => {
@@ -60,9 +68,34 @@ app.post('/aquireShield', async (req, res) => {
 
   const walletAddress = ethers.utils.getAddress(address);
 
-  const response = await contract.sendShield(BigNumber.from(1), walletAddress)
+  try {
+    const response = await contract.mintShield(walletAddress)
 
-  res.send({"tx": response.hash})
+    res.send({"tx": response.hash})
+  } catch (err) {
+    res.send({"err": err.message})
+  }
+})
+
+app.post('/aquireLegendaryArmor', async (req, res) => {
+  const address = req.body.address;
+  const provider = new ethers.providers.InfuraProvider('sepolia', process.env.INFURA_API_KEY)
+  const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+  const contract = new ethers.Contract(
+      process.env.GAME_ITEMS_CONTRACT_ADDRESS,
+      BasicItemsAbi.abi,
+      signer,
+  )
+
+  const walletAddress = ethers.utils.getAddress(address);
+
+  try {
+    const response = await contract.mintLegendaryItem(walletAddress)
+
+    res.send({"tx": response.hash})
+  } catch (err) {
+    res.send({"err": err.message})
+  }
 })
 
 app.listen(4000, () => {console.log('Server started at http://localhost:4000')});
