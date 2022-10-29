@@ -5,7 +5,7 @@ import {
   Container,
   Button,
   Badge,
-  CopyButton, Tooltip, ActionIcon, useMantineColorScheme, Group,
+  CopyButton, Tooltip, ActionIcon, useMantineColorScheme
 } from '@mantine/core';
 import {IconSun, IconMoonStars, IconCopy, IconCheck } from '@tabler/icons';
 

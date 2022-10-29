@@ -7,7 +7,7 @@ module.exports = {
   solidity: '0.8.14',
   networks: {
     sepolia: {
-      url: process.env.ETH_GOERLI_RPC_URL,
+      url: process.env.ETH_SEPOLIA_RPC_URL,
       accounts: [process.env.PRIVATE_KEY],
     },
   },
