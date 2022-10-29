@@ -48,7 +48,7 @@ app.post('/aquireSword', async (req, res) => {
   const walletAddress = ethers.utils.getAddress(address);
 
   try {
-    const response = await contract.mintSword(walletAddress)
+    const response = await contract.mintSword(BigNumber.from(1), walletAddress)
 
     res.send({"tx": response.hash})
   } catch (err) {
@@ -69,7 +69,7 @@ app.post('/aquireShield', async (req, res) => {
   const walletAddress = ethers.utils.getAddress(address);
 
   try {
-    const response = await contract.mintShield(walletAddress)
+    const response = await contract.mintShield(BigNumber.from(1), walletAddress)
 
     res.send({"tx": response.hash})
   } catch (err) {
