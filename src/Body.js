@@ -1,15 +1,27 @@
 import {useEffect, useState} from 'react';
 import {BigNumber, ethers} from 'ethers';
-import CreateCharacterAbi from './../CreateCharacterAbi.json';
-import BasicGameItemsAbi from './../BasicGameItemsAbi.json';
+import CreateCharacterAbi from './CreateCharacterAbi.json';
+import BasicGameItemsAbi from './BasicGameItemsAbi.json';
 import Character from './Character';
-import { TextInput, Button, LoadingOverlay, ActionIcon, Alert } from '@mantine/core';
-import { IconArrowRight,  } from '@tabler/icons';
+import SendIcon from '@mui/icons-material/Send';
+import LoadingButton from '@mui/lab/LoadingButton';
+import CloseIcon from '@mui/icons-material/Close';
+import {
+  Alert,
+  Backdrop, Box,
+  ButtonGroup,
+  CircularProgress,
+  Collapse,
+  Container,
+  IconButton,
+  InputBase,
+  Paper,
+} from '@mui/material';
 
 const contractAddress = '0x3eEec5Dcc66a2D071BCefA7723A76c993302523e';
 const itemsContractAddress = '0x6791C46964D64f31b4bB42ffcF0785ff45E0cf68';
 
-function Main({accounts, isConnected}) {
+function Body({accounts, isConnected}) {
   const [characterName, setCharacterName] = useState('');
   const [characterId, setCharacterId] = useState('0');
   const [chars, setChars] = useState([]);
@@ -27,6 +39,7 @@ function Main({accounts, isConnected}) {
   const [error, setError] = useState(false);
   const [errorM, setErrorM] = useState('');
   const [errDetail, setErrDetail] = useState('');
+  const [open, setOpen] = useState(false);
 
   const getContractChar = (signer) => {
     return new ethers.Contract(
@@ -142,8 +155,9 @@ function Main({accounts, isConnected}) {
       } catch (err) {
         console.log(err);
         setError(true);
-        setErrorM('character creation')
-        setErrDetail(err.message)
+        setErrorM('character creation');
+        setOpen(true);
+        setErrDetail(err.message);
         setLoadingCreateChar(false);
       }
     }
@@ -166,16 +180,16 @@ function Main({accounts, isConnected}) {
     setApiDisabled(true);
     setError(false);
     if (itemId === GOLD_ID) {
-      url = 'http://localhost:4000/aquireGold'
+      url = 'http://localhost:4000/aquireGold';
     }
     if (itemId === SWORD_ID) {
-      url = 'http://localhost:4000/aquireSword'
+      url = 'http://localhost:4000/aquireSword';
     }
     if (itemId === SHIELD_ID) {
-      url = 'http://localhost:4000/aquireShield'
+      url = 'http://localhost:4000/aquireShield';
     }
     if (itemId === LEGENDARY_ID) {
-      url = 'http://localhost:4000/aquireLegendaryArmor'
+      url = 'http://localhost:4000/aquireLegendaryArmor';
     }
     try {
 
@@ -196,7 +210,7 @@ function Main({accounts, isConnected}) {
       }
 
       let txResult;
-      while (typeof txResult == "undefined") {
+      while (typeof txResult == 'undefined') {
         txResult = await getTxReceipt(json.tx);
       }
 
@@ -218,24 +232,28 @@ function Main({accounts, isConnected}) {
     } catch (err) {
       if (itemId === GOLD_ID) {
         setErrorM('getting gold');
+        setOpen(true);
         setError(true);
       }
       if (itemId === SWORD_ID) {
         setErrorM('getting sword');
+        setOpen(true);
         setError(true);
       }
       if (itemId === SHIELD_ID) {
         setErrorM('getting shield');
+        setOpen(true);
         setError(true);
       }
       if (itemId === LEGENDARY_ID) {
         setErrorM('getting legendary armor');
+        setOpen(true);
         setError(true);
       }
-      setErrDetail(err.message)
+      setErrDetail(err.message);
       setApiDisabled(false);
     }
-  }
+  };
 
   const sellItem = async (itemId) => {
     setSellDisabled(true);
@@ -250,7 +268,7 @@ function Main({accounts, isConnected}) {
             BigNumber.from(1));
 
         let txResult;
-        while (typeof txResult == "undefined") {
+        while (typeof txResult == 'undefined') {
           txResult = await getTxReceipt(res.hash);
         }
 
@@ -263,11 +281,17 @@ function Main({accounts, isConnected}) {
           setSellDisabled(false);
         }
       } catch (err) {
-        if (itemId === SWORD_ID) setErrorM('selling sword');
-        if (itemId === SHIELD_ID) setErrorM('selling shield');
+        if (itemId === SWORD_ID) {
+          setErrorM('selling sword');
+          setOpen(true);
+        }
+        if (itemId === SHIELD_ID) {
+          setErrorM('selling shield');
+          setOpen(true);
+        }
         setError(true);
         setSellDisabled(false);
-        setErrDetail(err.message)
+        setErrDetail(err.message);
       }
     }
   };
@@ -279,64 +303,139 @@ function Main({accounts, isConnected}) {
   const renderButtonsForContractInteraction = () => {
     if (chars.length === 0) return <></>;
     return (
-        <Button.Group>
-          <Button onClick={() => {getItem(GOLD_ID)}} loading={apiDisabled}>Get
+        <ButtonGroup>
+          <LoadingButton
+              onClick={() => {
+                getItem(GOLD_ID);
+              }}
+              size="small"
+              color="secondary"
+              variant="contained"
+              loading={apiDisabled}>Get
             Gold ({gold})
-          </Button>
-          <Button onClick={() => {getItem(SWORD_ID)}}
-                  loading={apiDisabled}>Get Sword ({sword})
-          </Button>
-          <Button onClick={() => {getItem(SHIELD_ID)}}
-                  loading={apiDisabled}>Get Shield ({shield})
-          </Button>
-          <Button onClick={() => {getItem(LEGENDARY_ID)}}
-                  loading={apiDisabled}>Get Legendary armor ({legendaryArmor})
-          </Button>
-          <Button onClick={() => {sellItem(SWORD_ID)}} disabled={sword === 0}>Sell Sword
+          </LoadingButton>
+          <LoadingButton
+              onClick={() => {
+                getItem(SWORD_ID);
+              }}
+              size="small"
+              color="secondary"
+              variant="contained"
+              loading={apiDisabled}>Get Sword ({sword})
+          </LoadingButton>
+          <LoadingButton
+              onClick={() => {
+                getItem(SHIELD_ID);
+              }}
+              size="small"
+              color="secondary"
+              variant="contained"
+              loading={apiDisabled}>Get Shield ({shield})
+          </LoadingButton>
+          <LoadingButton
+              onClick={() => {
+                getItem(LEGENDARY_ID);
+              }}
+              size="small"
+              color="secondary"
+              variant="contained"
+              loading={apiDisabled}>Get Legendary armor
+            ({legendaryArmor})
+          </LoadingButton>
+          <LoadingButton
+              onClick={() => {
+                sellItem(SWORD_ID);
+              }} disabled={sword === 0}
+
+              size="small"
+              color="secondary"
+              variant="contained"
+              loading={apiDisabled}>Sell Sword
             ({sword}) for golds
-          </Button>
-          <Button onClick={() => {sellItem(SHIELD_ID)}} disabled={shield === 0}>Sell Shield
+          </LoadingButton>
+          <LoadingButton
+              onClick={() => {
+                sellItem(SHIELD_ID);
+              }}
+              disabled={shield === 0}
+
+              size="small"
+              color="secondary"
+              variant="contained"
+              loading={apiDisabled}>Sell Shield
             ({shield}) for golds
-          </Button>
-        </Button.Group>
+          </LoadingButton>
+        </ButtonGroup>
     );
   };
 
   return (
-      <div>
-        <LoadingOverlay visible={loadingCreateChar || sellDisabled} overlayBlur={2} />
-        {isConnected ? (
-                <div>
-                  {error ? (
-                      <Alert
-                          withCloseButton
-                          closeButtonLabel="Close alert"
-                          color="red"
-                          title={`Something went wrong with ${errorM}!`}
-                          onClose={() => {setError(false)}}
-                      >
-                        {errDetail}
-                  </Alert>
-                  ) : <></>}
+      <Box mt={5}>
+        <Container>
+          <Backdrop
+              sx={{color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1}}
+              open={loadingCreateChar || sellDisabled}
+          >
+            <CircularProgress color="inherit"/>
+          </Backdrop>
+          {isConnected ? (
+                  <div>
+                    {error ? (
+                        <Collapse in={error}>
+                          <Alert
+                              severity="error"
+                              title={`Something went wrong with ${errorM}!`}
+                              action={
+                                <IconButton
+                                    aria-label="close"
+                                    color="inherit"
+                                    size="small"
+                                    onClick={() => {
+                                      setError(false);
+                                    }}
+                                >
+                                  <CloseIcon fontSize="inherit"/>
+                                </IconButton>
+                              }
+                              sx={{mb: 2}}
+                          >
+                            {errDetail}
+                          </Alert>
+                        </Collapse>
+                    ) : <></>}
 
-                  <TextInput
-                      size="md"
-                      onChange={handleChangeCharacterName}
-                      rightSection={
-                        <ActionIcon size={32} onClick={handleCreateCharacter}>
-                          <IconArrowRight size={18} stroke={1.5} />
-                        </ActionIcon>
-                      }
-                      placeholder="Character name"
-                  />
-                  <Character chars={chars}/>
-                  {renderButtonsForContractInteraction()}
-                </div>
-            )
-            : <div>Connect wallet</div>
-        }
-      </div>
+                    <Paper
+                        component="form"
+                        sx={{
+                          p: '2px 4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          width: 400,
+                        }}
+                    >
+                      <InputBase
+                          sx={{ml: 1, flex: 1}}
+                          placeholder="Character name"
+                          inputProps={{'aria-label': 'search google maps'}}
+                          onChange={handleChangeCharacterName}
+                          variant="outlined"
+                      />
+                      <IconButton
+                          type="button"
+                          sx={{p: '10px'}}
+                          onClick={handleCreateCharacter}>
+                        <SendIcon/>
+                      </IconButton>
+                    </Paper>
+                    <Character chars={chars}/>
+                    {renderButtonsForContractInteraction()}
+                  </div>
+              )
+              : <div>Connect wallet</div>
+          }
+        </Container>
+      </Box>
   );
 }
 
-export default Main;
+export default Body;

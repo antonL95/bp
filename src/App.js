@@ -1,34 +1,26 @@
 import './App.css';
-import {useState} from 'react';
-import Navbar from './Components/Navbar';
-import Main from './Components/Main';
-import {MantineProvider, ColorSchemeProvider, Container} from '@mantine/core';
+import {useState, useMemo, createContext} from 'react';
+import Menu from './Menu';
+import Body from './Body';
+import {ThemeProvider, createTheme} from '@mui/material/styles';
 
-function App() {
+const ColorModeContext = createContext({
+  toggleColorMode: () => {
+  },
+});
+
+export default function App() {
   const [accounts, setAccounts] = useState([]);
   const [isConnected, setIsConnected] = useState(Boolean(accounts[0]));
-  const [colorScheme, setColorScheme] = useState('dark');
-  const toggleColorScheme = (value) =>
-      setColorScheme(value || (colorScheme === 'dark' ? 'light' : 'dark'));
+  const theme = createTheme({palette: 'dark',});
 
   return (
-      <ColorSchemeProvider colorScheme={colorScheme}
-                           toggleColorScheme={toggleColorScheme}>
-        <MantineProvider theme={{
-          colorScheme,
-          fontFamily: 'Verdana, sans-serif',
-          fontFamilyMonospace: 'Monaco, Courier, monospace',
-          headings: {fontFamily: 'Greycliff CF, sans-serif'},
-        }} withGlobalStyles
-                         withNormalizeCSS>
-          <Navbar accounts={accounts} setAccounts={setAccounts} isConnected={isConnected}
-                  setIsConnected={setIsConnected}/>
-          <Container>
-            <Main accounts={accounts} isConnected={isConnected}/>
-          </Container>
-        </MantineProvider>
-      </ColorSchemeProvider>
+      <ThemeProvider theme={theme}>
+        <Menu accounts={accounts} setAccounts={setAccounts}
+              isConnected={isConnected}
+              setIsConnected={setIsConnected}/>
+
+        <Body accounts={accounts} isConnected={isConnected}/>
+      </ThemeProvider>
   );
 }
-
-export default App;
